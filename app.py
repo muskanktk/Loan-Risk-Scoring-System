@@ -247,48 +247,74 @@ if "baseline" in st.session_state:
         for t in tips:
             st.markdown(f"- {t}")
 
-    # -------- What-if analysis (reactive) --------
-    with st.expander("What-if analysis", expanded=True):
-        bump_down = st.number_input("Extra down payment ($)", 0, 100_000, 5_000, 1_000, key="whatif_bump_down")
-        bump_rate = st.number_input("Rate reduction (percentage points)", 0.0, 5.0, 0.5, 0.1, key="whatif_bump_rate")
-        bump_score = st.number_input("Credit score increase", 0, 200, 20, 5, key="whatif_bump_score")
-
-        # Recompute scenario against saved baseline
-        loan_amount_B = max(base["property_value"] - (base["down_payment"] + bump_down), 0.0)
-        interest_rate_B = max(base["interest_rate"] - bump_rate, 0.0)
-        credit_score_B = min(base["credit_score"] + bump_score, 850)
-
-        piti_B = monthly_payment(loan_amount_B, interest_rate_B, base["term_months"])
-        dti_B = (base["monthly_debt"] + piti_B) / base["gross_monthly_income"]
-        dti_for_model_B = (dti_B * 100.0) if dti_is_ratio else dti_B
-
-        if model is not None:
-            X_user_B = build_feature_row(
-                age=base["age"],
-                income=base["income"],
-                loan_amount=loan_amount_B,
-                credit_score=credit_score_B,
-                months_employed=base["months_employed"],
-                interest_rate=interest_rate_B,
-                term_months=base["term_months"],
-                dti_value=dti_for_model_B,
-                has_cosigner=base["has_cosigner"],
-            )
-            prob_B = float(model.predict_proba(X_user_B)[0, 1]) 
-
-            st.write(
-                f"Baseline: **{base['prob_default']:.2%}** → Scenario: **{prob_B:.2%}** "
-                f"(**Δ {(prob_B - base['prob_default']):+.2%}**)"
-            )
-        else:
-            st.warning("Model not found. Run `python train_model.py` first.")
-
-# ========== Render the download button OUTSIDE the form ==========
-if st.session_state.get("scenario_ready") and "scenario_csv" in st.session_state:
-    download_placeholder.download_button(
-        "Download scenario CSV",
-        st.session_state["scenario_csv"],
-        file_name="loan_scenario.csv",
-        mime="text/csv",
-        key="dl_scenario_csv"
+   # -------- What-if analysis (reactive) --------
+with st.expander("What-if analysis", expanded=True):
+    st.caption(
+        f"Model expects DTI as {'PERCENT (0–100)' if dti_is_ratio else 'RATIO (0–1)'}; "
+        "controls below recompute your inputs and rescore."
     )
+    c1, c2 = st.columns(2)
+    with c1:
+        bump_down = st.number_input("Extra down payment ($)", 0, 300_000, 20_000, 1_000, key="whatif_bump_down")
+        bump_rate = st.number_input("Rate reduction (percentage points)", 0.0, 5.0, 1.0, 0.1, key="whatif_bump_rate")
+    with c2:
+        bump_score = st.number_input("Credit score increase (+points)", 0, 200, 40, 5, key="whatif_bump_score")
+        debt_cut = st.number_input("Monthly debt reduction ($)", 0, 5000, 250, 50, key="whatif_debt_cut")
+
+    # Recompute scenario against saved baseline
+    loan_amount_B = max(base["property_value"] - (base["down_payment"] + bump_down), 0.0)
+    interest_rate_B = max(base["interest_rate"] - bump_rate, 0.0)
+    credit_score_B = min(base["credit_score"] + bump_score, 850)
+
+    piti_B = monthly_payment(loan_amount_B, interest_rate_B, base["term_months"])
+    # Allow user to reduce monthly non-housing debt to see DTI improvements
+    monthly_debt_B = max(base["monthly_debt"] - debt_cut, 0.0)
+
+    dti_B = (monthly_debt_B + piti_B) / base["gross_monthly_income"]
+    dti_for_model_B = (dti_B * 100.0) if dti_is_ratio else dti_B
+    ltv_B = (loan_amount_B / base["property_value"]) if base["property_value"] > 0 else 0.0
+
+    # Guard: if scenario == baseline, let user know why it's unchanged
+    scenario_is_same = (
+        abs(loan_amount_B - base["loan_amount"]) < 1e-6 and
+        abs(interest_rate_B - base["interest_rate"]) < 1e-9 and
+        abs(credit_score_B - base["credit_score"]) < 1e-9 and
+        abs(monthly_debt_B - base["monthly_debt"]) < 1e-9
+    )
+    if scenario_is_same:
+        st.info("Scenario matches your baseline. Adjust the controls to see changes.")
+
+    if model is not None:
+        X_user_B = build_feature_row(
+            age=base["age"],
+            income=base["income"],
+            loan_amount=loan_amount_B,
+            credit_score=credit_score_B,
+            months_employed=base["months_employed"],
+            interest_rate=interest_rate_B,
+            term_months=base["term_months"],
+            dti_value=dti_for_model_B,
+            has_cosigner=base["has_cosigner"],
+        )
+        prob_B = float(model.predict_proba(X_user_B)[0, 1])
+
+        # Show metrics (more than just probability)
+        st.markdown("**Scenario metrics:**")
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("P&I (new)", f"${piti_B:,.0f}/mo")
+        m2.metric("DTI (new)", f"{dti_B:.2f}")
+        m3.metric("LTV (new)", f"{ltv_B:.2f}")
+        m4.metric("Credit (new)", f"{int(credit_score_B)}")
+
+        # More precision so movement is visible even near saturation
+        st.write(
+            f"Baseline: **{base['prob_default']*100:.4f}%** → "
+            f"Scenario: **{prob_B*100:.4f}%** "
+            f"(**Δ {(prob_B - base['prob_default'])*100:+.4f}%**)"
+        )
+
+        # Optional: progress bar still uses 0–1
+        st.progress(min(max(prob_B, 0.0), 1.0))
+    else:
+        st.warning("Model not found. Run `python train_model.py` first.")
+
