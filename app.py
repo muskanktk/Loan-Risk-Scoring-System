@@ -18,6 +18,9 @@ st.markdown(
         }
         div.stButton > button:first-child:hover { background-color: #002244; color: white; }
         h1 { color: #003366 !important; }
+        .risk-low { color: green; font-weight: bold; }
+        .risk-medium { color: orange; font-weight: bold; }
+        .risk-high { color: red; font-weight: bold; }
     </style>
     """,
     unsafe_allow_html=True
@@ -52,25 +55,28 @@ download_placeholder = st.empty()
 @st.cache_resource
 def load_model():
     model_path = Path(__file__).parent / "models" / "risk_model.pkl"
-    obj = joblib.load(model_path)
-    if isinstance(obj, dict) and "model" in obj:
-        return obj
-    return {"model": obj, "feature_names": [
-        "Age","Income","LoanAmount","CreditScore","MonthsEmployed",
-        "NumCreditLines","InterestRate","LoanTerm","DTIRatio","HasCoSigner"
-    ]}
+    try:
+        obj = joblib.load(model_path)
+        if isinstance(obj, dict) and "model" in obj:
+            return obj
+        return {"model": obj, "feature_names": [
+            "Age","Income","LoanAmount","CreditScore","MonthsEmployed",
+            "NumCreditLines","InterestRate","LoanTerm","DTIRatio","HasCoSigner"
+        ]}
+    except Exception as e:
+        st.error(f"Model loading failed: {str(e)}")
+        st.info("Please run `python train_model.py` first to train the model.")
+        return None
 
-try:
-    model_obj = load_model()
-    clf = model_obj["model"]
-    FEATURE_NAMES = model_obj["feature_names"]
-except Exception:
-    clf = None
-    FEATURE_NAMES = []
+model_obj = load_model()
+clf = model_obj["model"] if model_obj else None
+FEATURE_NAMES = model_obj["feature_names"] if model_obj else []
 
 # ================= Helpers =================
 def monthly_payment(principal: float, annual_rate_pct: float, n_months: int) -> float:
     """Principal + interest (no taxes/insurance)."""
+    if principal <= 0:
+        return 0.0
     r = (annual_rate_pct / 100.0) / 12.0
     if r == 0:
         return principal / n_months
@@ -94,10 +100,50 @@ def build_feature_row(age, income, loan_amount, credit_score, months_employed,
     # Ensure order
     return row[[*FEATURE_NAMES]] if FEATURE_NAMES else row
 
+def validate_loan_inputs(age, income, loan_amount, credit_score, 
+                        employment_years, interest_rate, property_value, down_payment):
+    """
+    Validate user inputs for realistic loan parameters
+    """
+    errors = []
+    
+    # Check loan-to-value ratio
+    if property_value > 0:
+        ltv = loan_amount / property_value
+        if ltv > 0.95:
+            errors.append("❌ Loan-to-value ratio should typically be below 95%")
+        if ltv > 1.0:
+            errors.append("❌ Loan amount cannot exceed property value")
+    
+    # Check debt-to-income ratio (estimated)
+    if income > 0:
+        monthly_pmt = monthly_payment(loan_amount, interest_rate, 360)  # Estimate with 30-year term
+        estimated_dti = monthly_pmt / (income/12)
+        if estimated_dti > 0.5:
+            errors.append("⚠️ Estimated debt-to-income ratio appears high (above 50%)")
+    
+    # Check employment consistency
+    if employment_years == 0 and income > 50000:
+        errors.append("⚠️ If unemployed, income should typically be lower")
+    
+    # Check credit score
+    if credit_score < 300 or credit_score > 850:
+        errors.append("❌ Credit score should be between 300 and 850")
+    
+    # Check interest rate
+    if interest_rate > 15:
+        errors.append("⚠️ Interest rate seems unusually high")
+    
+    # Check age
+    if age < 18:
+        errors.append("❌ Borrower must be at least 18 years old")
+    
+    return errors
+
 # ================= Sidebar thresholds =================
 st.sidebar.header("Scoring Options")
-low_thr = st.sidebar.slider("Low → Medium threshold", 0.00, 0.50, 0.20, 0.01, key="opt_low_thr")
-med_thr = st.sidebar.slider("Medium → High threshold", 0.30, 0.90, 0.50, 0.01, key="opt_med_thr")
+low_thr = st.sidebar.slider("Low → Medium threshold", 0.00, 0.50, 0.15, 0.01, key="opt_low_thr")
+med_thr = st.sidebar.slider("Medium → High threshold", 0.30, 0.90, 0.35, 0.01, key="opt_med_thr")
 
 # ================= Main Form =================
 if "borrower_type" in st.session_state:
@@ -110,30 +156,30 @@ if "borrower_type" in st.session_state:
 
         if bt == "Independent":
             with left:
-                age = st.number_input("Age", min_value=18, max_value=100, value=25, step=1, key="inp_age_ind")
-                annual_income = st.number_input("Annual Income ($)", min_value=0, value=50_000, step=1_000, key="inp_income_ind")
-                monthly_debt = st.number_input("Monthly Non-Housing Debt ($)", min_value=0, value=300, step=50, key="inp_debt_ind")
-                employment_years = st.number_input("Employment Length (years)", min_value=0, max_value=50, value=2, step=1, key="inp_empyrs_ind")
-                num_credit_lines = st.number_input("Number of Open Credit Lines", min_value=0, value=4, step=1, key="inp_ncl_ind")
+                age = st.number_input("Age", min_value=18, max_value=100, value=35, step=1, key="inp_age_ind")
+                annual_income = st.number_input("Annual Income ($)", min_value=0, value=75000, step=1000, key="inp_income_ind")
+                monthly_debt = st.number_input("Monthly Non-Housing Debt ($)", min_value=0, value=500, step=50, key="inp_debt_ind")
+                employment_years = st.number_input("Employment Length (years)", min_value=0, max_value=50, value=5, step=1, key="inp_empyrs_ind")
+                num_credit_lines = st.number_input("Number of Open Credit Lines", min_value=0, value=3, step=1, key="inp_ncl_ind")
             with right:
-                credit_score = st.number_input("Credit Score", min_value=300, max_value=850, value=680, step=1, key="inp_cs_ind")
-                property_value = st.number_input("Property Value ($)", min_value=50_000, value=350_000, step=5_000, key="inp_prop_ind")
-                down_payment = st.number_input("Down Payment ($)", min_value=0, value=35_000, step=5_000, key="inp_down_ind")
-                interest_rate = st.number_input("Interest Rate (%)", min_value=1.0, max_value=25.0, value=6.5, step=0.1, key="inp_rate_ind")
+                credit_score = st.number_input("Credit Score", min_value=300, max_value=850, value=720, step=1, key="inp_cs_ind")
+                property_value = st.number_input("Property Value ($)", min_value=50000, value=350000, step=5000, key="inp_prop_ind")
+                down_payment = st.number_input("Down Payment ($)", min_value=0, value=70000, step=5000, key="inp_down_ind")
+                interest_rate = st.number_input("Interest Rate (%)", min_value=1.0, max_value=15.0, value=6.5, step=0.1, key="inp_rate_ind")
                 term_months = st.number_input("Term (months)", min_value=60, max_value=480, value=360, step=12, key="inp_term_ind")
         else:
             with left:
                 age = st.number_input("Age", min_value=18, max_value=100, value=22, step=1, key="inp_age_dep")
                 relation = st.selectbox("Relationship to Guardian / Co-signer", ["Parent", "Guardian", "Co-signer"], key="inp_rel_dep")
                 guardian_employment_years = st.number_input("Guardian Employment Length (years)", min_value=0, max_value=50, value=8, step=1, key="inp_empyrs_dep")
-                guardian_annual_income = st.number_input("Guardian Annual Income ($)", min_value=0, value=110_000, step=1_000, key="inp_income_dep")
-                guardian_monthly_debt = st.number_input("Guardian Monthly Debt ($)", min_value=0, value=400, step=50, key="inp_debt_dep")
-                num_credit_lines = st.number_input("Number of Open Credit Lines (Guardian)", min_value=0, value=6, step=1, key="inp_ncl_dep")
+                guardian_annual_income = st.number_input("Guardian Annual Income ($)", min_value=0, value=85000, step=1000, key="inp_income_dep")
+                guardian_monthly_debt = st.number_input("Guardian Monthly Debt ($)", min_value=0, value=600, step=50, key="inp_debt_dep")
+                num_credit_lines = st.number_input("Number of Open Credit Lines (Guardian)", min_value=0, value=4, step=1, key="inp_ncl_dep")
             with right:
-                guardian_credit_score = st.number_input("Guardian Credit Score", min_value=300, max_value=850, value=720, step=1, key="inp_cs_dep")
-                property_value = st.number_input("Property Value ($)", min_value=50_000, value=300_000, step=5_000, key="inp_prop_dep")
-                down_payment = st.number_input("Down Payment ($)", min_value=0, value=30_000, step=5_000, key="inp_down_dep")
-                interest_rate = st.number_input("Interest Rate (%)", min_value=1.0, max_value=25.0, value=6.8, step=0.1, key="inp_rate_dep")
+                guardian_credit_score = st.number_input("Guardian Credit Score", min_value=300, max_value=850, value=740, step=1, key="inp_cs_dep")
+                property_value = st.number_input("Property Value ($)", min_value=50000, value=300000, step=5000, key="inp_prop_dep")
+                down_payment = st.number_input("Down Payment ($)", min_value=0, value=60000, step=5000, key="inp_down_dep")
+                interest_rate = st.number_input("Interest Rate (%)", min_value=1.0, max_value=15.0, value=6.8, step=0.1, key="inp_rate_dep")
                 term_months = st.number_input("Term (months)", min_value=60, max_value=480, value=360, step=12, key="inp_term_dep")
 
         submitted = st.form_submit_button("Submit", use_container_width=True)
@@ -159,6 +205,18 @@ if "borrower_type" in st.session_state:
             dti = (monthly_debt_for_calc + piti) / gross_monthly_income   # ratio 0–1
             ltv = (loan_amount / property_value) if property_value > 0 else 0.0
 
+            # -------- Input validation --------
+            validation_errors = validate_loan_inputs(
+                age, income_for_calc, loan_amount, used_credit_score,
+                used_employment_years, interest_rate, property_value, down_payment
+            )
+
+            if validation_errors:
+                for error in validation_errors:
+                    st.error(error)
+                if any("❌" in error for error in validation_errors):
+                    st.stop()
+
             # -------- Prediction --------
             if clf is None:
                 st.warning("Model not found or failed to load. Run `python train_model.py` first.")
@@ -183,16 +241,19 @@ if "borrower_type" in st.session_state:
                     try:
                         prob_default = float(clf.predict_proba(X_user)[0, 1])
                     except Exception as e:
-                        st.exception(e)
+                        st.error(f"Prediction error: {str(e)}")
                         st.stop()
 
                 # thresholds from sidebar
                 if prob_default < low_thr:
                     risk_label = "Low Risk ✅"
+                    risk_class = "risk-low"
                 elif prob_default < med_thr:
                     risk_label = "Medium Risk ⚠️"
+                    risk_class = "risk-medium"
                 else:
                     risk_label = "High Risk ❌"
+                    risk_class = "risk-high"
 
                 # ----- Save baseline to session_state so What-if can update reactively -----
                 st.session_state["baseline"] = {
@@ -215,6 +276,7 @@ if "borrower_type" in st.session_state:
                     "has_cosigner": has_cosigner,
                     "prob_default": prob_default,
                     "risk_label": risk_label,
+                    "risk_class": risk_class,
                 }
 
                 # Build CSV & flag ready
@@ -240,16 +302,18 @@ if "baseline" in st.session_state:
     st.divider()
     st.write(f"**Predicted Default Probability:** {base['prob_default']:.2%}")
     st.progress(min(max(base["prob_default"], 0.0), 1.0))
-    st.subheader(f"Risk Category: {base['risk_label']}")
+    st.markdown(f'<p class="{base["risk_class"]}">Risk Category: {base["risk_label"]}</p>', unsafe_allow_html=True)
 
     # Guidance
     tips = []
     if base["dti_ratio"] > 0.43:
         tips.append("DTI is high; consider reducing monthly debt or increasing down payment.")
-    if base["property_value"] and (base["loan_amount"] / base["property_value"]) > 0.80:
+    if base["ltv"] > 0.80:
         tips.append("LTV > 0.80 may trigger mortgage insurance.")
     if base["credit_score"] < 620:
         tips.append("Low credit score; conventional eligibility may be limited.")
+    if base["interest_rate"] > 8.0:
+        tips.append("Interest rate seems high; consider improving credit score or shopping around.")
     if tips:
         st.markdown("**Suggestions:**")
         for t in tips:
@@ -260,14 +324,14 @@ if "baseline" in st.session_state:
         st.caption("DTI treated as RATIO (0–1) in both training and inference.")
         c1, c2 = st.columns(2)
         with c1:
-            bump_down = st.number_input("Extra down payment ($)", 0, 300_000, 20_000, 1_000, key="whatif_bump_down")
-            bump_rate = st.number_input("Rate reduction (percentage points)", 0.0, 5.0, 1.0, 0.1, key="whatif_bump_rate")
+            bump_down = st.number_input("Extra down payment ($)", 0, 300000, 20000, 1000, key="whatif_bump_down")
+            bump_rate = st.number_input("Rate reduction (percentage points)", 0.0, 5.0, 0.5, 0.1, key="whatif_bump_rate")
         with c2:
-            bump_score = st.number_input("Credit score increase (+points)", 0, 200, 40, 5, key="whatif_bump_score")
-            debt_cut = st.number_input("Monthly debt reduction ($)", 0, 5000, 250, 50, key="whatif_debt_cut")
+            bump_score = st.number_input("Credit score increase (+points)", 0, 200, 20, 5, key="whatif_bump_score")
+            debt_cut = st.number_input("Monthly debt reduction ($)", 0, 5000, 100, 50, key="whatif_debt_cut")
 
         loan_amount_B = max(base["property_value"] - (base["down_payment"] + bump_down), 0.0)
-        interest_rate_B = max(base["interest_rate"] - bump_rate, 0.0)
+        interest_rate_B = max(base["interest_rate"] - bump_rate, 0.1)  # Avoid 0% rate
         credit_score_B = min(base["credit_score"] + bump_score, 850)
 
         piti_B = monthly_payment(loan_amount_B, interest_rate_B, base["term_months"])
@@ -289,21 +353,26 @@ if "baseline" in st.session_state:
                 dti_ratio=dti_B,
                 has_cosigner=base["has_cosigner"],
             )
-            prob_B = float(clf.predict_proba(X_user_B)[0, 1])
+            try:
+                prob_B = float(clf.predict_proba(X_user_B)[0, 1])
+            except Exception as e:
+                st.error(f"What-if analysis failed: {str(e)}")
+                prob_B = base["prob_default"]
 
             # Show metrics
             st.markdown("**Scenario metrics:**")
             m1, m2, m3, m4 = st.columns(4)
-            m1.metric("P&I (new)", f"${piti_B:,.0f}/mo")
-            m2.metric("DTI (new)", f"{dti_B:.2f}")
-            m3.metric("LTV (new)", f"{ltv_B:.2f}")
-            m4.metric("Credit (new)", f"{int(credit_score_B)}")
+            m1.metric("P&I (new)", f"${piti_B:,.0f}/mo", f"${piti_B - base['piti']:+.0f}")
+            m2.metric("DTI (new)", f"{dti_B:.2f}", f"{dti_B - base['dti_ratio']:+.2f}")
+            m3.metric("LTV (new)", f"{ltv_B:.2f}", f"{ltv_B - base['ltv']:+.2f}")
+            m4.metric("Credit (new)", f"{int(credit_score_B)}", f"+{bump_score}")
 
             # More precision so movement is visible even near saturation
+            delta = prob_B - base["prob_default"]
             st.write(
-                f"Baseline: **{base['prob_default']*100:.4f}%** → "
-                f"Scenario: **{prob_B*100:.4f}%** "
-                f"(**Δ {(prob_B - base['prob_default'])*100:+.4f}%**)"
+                f"Baseline: **{base['prob_default']*100:.2f}%** → "
+                f"Scenario: **{prob_B*100:.2f}%** "
+                f"(**Δ {delta*100:+.2f}%**)"
             )
 
             st.progress(min(max(prob_B, 0.0), 1.0))
