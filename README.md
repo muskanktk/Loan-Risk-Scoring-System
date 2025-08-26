@@ -1,39 +1,33 @@
 # Loan Risk Scoring System
 
-Provide a what-if anaylsys with the loan amount based on indiuval status **Independent or Dependent**:
+Provide a **what-if analysis** for loan approval likelihood based on individual status (**Independent** or **Dependent**):
 
-1. Collected data from Kaggle for default Loan stats based on categories
-2. Trained the model to adjust the program
-3. Tested the model to provide a what-if anaylsys
-**Live demo:** [[https://ai-mentor-study-assistant-tvv5bhksyvyderelpq8pmh.streamlit.app/](https://ai-mentor-study-assistant-tvv5bhksyvyderelpq8pmh.streamlit.app/)](https://loan-risk-scoring-app-ztqeqbhh9cnf8ktcjdusxy.streamlit.app/)
+1. **Collected data** from Kaggle loan default datasets across borrower categories
+2. **Trained a machine learning model** to score loan risk
+3. **Tested and deployed the model** to provide interactive what-if analysis
 
+**Live demo:** [https://loan-risk-scoring-app-ztqeqbhh9cnf8ktcjdusxy.streamlit.app/](https://loan-risk-scoring-app-ztqeqbhh9cnf8ktcjdusxy.streamlit.app/)
 
-## 🚀 Features
+## Features
 
-*  **Two Form based on Status**: Mathces your condition.
-*  **Probailioy of payment or following thorugh with your plan**: OpenAI condenses content, adds examples, code, and analogies.
-*  **Provding DTI and LTI risks based on them **: Provides the risk being taken the loan based on LTI and DTI based on 
-*  **What-if-anylsys**: Chnages made to adjust the probaolby 
+* **Two borrower forms:** Independent (uses your info) or Dependent (uses guardian/co-signer info)
+* **Default probability prediction:** Shows chance of repayment vs. default and assigns a risk label (Low, Medium, High)
+* **DTI and LTV analysis:** Explains how debt-to-income ratio and loan-to-value ratio affect your risk
+* **What-if analysis:** Simulate changes (extra down payment, lower interest rate, improved credit score) and instantly see risk impact
+* **CSV Export:** Download your loan scenario results
 
-
-## 🛠️ Tech Stack
+## Tech Stack
 
 * **Language:** Python
-* **Frameworks/Libraries:** import streamlit as st
-import numpy as np
-import pandas as pd
-import joblib
-from pathlib import Path
+* **Frameworks/Libraries:** Streamlit, NumPy, pandas, scikit-learn, joblib
+* **Tools:** Git, VS Code
 
-* **Tools:** Git, VS Code / Visual Studio Code
-
-
-## 📦 Installation
+## Installation
 
 ```bash
 # 1) Clone the repository
-git clone https://github.com/<your-username>/AI-Mentor-Study-Assistant.git
-cd AI-Mentor-Study-Assistant
+git clone https://github.com/<your-username>/Loan-Risk-Scoring-System.git
+cd Loan-Risk-Scoring-System
 
 # 2) Create & activate a virtual environment
 python -m venv venv
@@ -53,23 +47,12 @@ streamlit
 pandas
 numpy
 scikit-learn
+joblib
 ```
 
 ---
 
-## 🔑 Environment Variables
-
-Create a `.env` file in the project root:
-
-```
-OPENAI_API_KEY=sk-...
-# Optional if you use other services:
-# YOUTUBE_API_KEY=...
-```
-
----
-
-## ▶Run Locally
+## Run Locally
 
 ```bash
 streamlit run app.py
@@ -77,69 +60,55 @@ streamlit run app.py
 
 Then open the local URL shown in your terminal.
 
-## 💡 How to Use
+## How to Use
 
-1. **Select option** Fill form based on your indiuval information.
----
+1. Choose **Independent** or **Dependent**
+2. Fill out the loan form with your details (income, debts, property value, down payment, credit score, etc.)
+3. Submit → see your **loan risk score** and **probability of default**
+4. Expand **What-if analysis** to test scenarios (e.g., add down payment, lower interest rate)
+5. Download results as CSV
 
-## 📂 Project Structure
+## Project Structure
 
 ```
-AI-Mentor-Study-Assistant/
-├─ app.py               # Streamlit entry point
+Loan-Risk-Scoring-System/
+├─ app.py               # Streamlit app entry point
 ├─ requirements.txt     # Python dependencies
+├─ train_model.py       # Script to train and save ML model
+├─ models/
+│   └─ risk_model.pkl   # Trained loan risk model
+├─ tests/               # (Optional) test scripts
+├─ data/                # Training dataset(s)
 ├─ README.md            # This file
-├─ .env                 # Your API keys (not committed)
-├─ data/                # Uploaded PDFs / sample assets
-└─ src/
-   ├─ summarizer.py     # OpenAI summary helpers
-   ├─ audio.py          # TTS (gTTS) utilities
-   ├─ quiz.py           # Quiz generation / logic
-   ├─ videos.py         # YouTube topic fetchers
-   └─ utils.py          # shared helpers (parsing, I/O, etc.)
+└─ .env                 # (Optional) secrets/config
 ```
-
-> Your exact files may differ—use this as a template.
 
 ---
 
-## 🌐 Hosted App
+## Hosted App
 
-* **Browser link:** https://loan-risk-scoring-app-ztqeqbhh9cnf8ktcjdusxy.streamlit.app/
+* **Browser link:** [Loan Risk Scoring System](https://loan-risk-scoring-app-ztqeqbhh9cnf8ktcjdusxy.streamlit.app/)
 
+---
 
-## 🛣️ Roadmap
+## Roadmap
 
-* [ ] Additional voice models / SSML support
-* [ ] Richer simulations and spaced-repetition scheduling
-* [ ] Per-topic flashcards and cloze deletions
-* [ ] Multi-PDF study packs & cross-topic linking
+* [ ] Add visualization of monthly payment breakdown (principal vs. interest)
+* [ ] More granular credit / DTI suggestions
+* [ ] Support for multiple borrower profiles comparison
+* [ ] Expand dataset for improved accuracy
 
-## FAQ
+## Sample Output
 
-Download the information doe your status in .cvs file 
+Example exported scenario:
+[loan_scenario (2).csv](https://github.com/user-attachments/files/21991303/loan_scenario.2.csv)
+
 ## Troubleshooting
 
-* **`ModuleNotFoundError`**: Re-run `pip install -r requirements.txt` in the active venv.
-* **Streamlit won’t start**: Ensure the venv is active; try `python --version` and `which streamlit`.
-* **gTTS network issues**: Ensure your network allows outbound requests; retry or switch networks.
-
-## Contributing
-
-Please open an issue to discuss substantial changes first.
+* **`ModuleNotFoundError`** → Run `pip install -r requirements.txt` inside your virtualenv
+* **Streamlit won’t start** → Ensure virtual environment is active (`which streamlit` or `venv\Scripts\activate`)
+* **Model not found** → Run `python train_model.py` to create `models/risk_model.pkl`
 
 ## License
+
 MIT License – see [LICENSE](LICENSE) for details.
-
-
-## Acknowledgments
-
-
-
----
-
-## Final Product
-
-[loan_scenario (1).csv](https://github.com/user-attachments/files/21991205/loan_scenario.1.csv)
-BorrowerType,Age,Income,LoanAmount,CreditScore,MonthsEmployed,InterestRate,LoanTerm,DTI_ratio,DTI_for_model,HasCoSigner,LTV,ProbDefault,RiskLabel
-Independent,25,50000,315000,680,24,6.5,360,0.5498434257606818,54.98434257606818,0,0.9,0.9999999740307541,High Risk ❌
