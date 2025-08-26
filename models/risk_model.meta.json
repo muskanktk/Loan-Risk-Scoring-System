@@ -1,0 +1,23 @@
+{
+  "feature_names": [
+    "Age",
+    "Income",
+    "LoanAmount",
+    "CreditScore",
+    "MonthsEmployed",
+    "NumCreditLines",
+    "InterestRate",
+    "LoanTerm",
+    "DTIRatio",
+    "HasCoSigner"
+  ],
+  "target_name": "Default",
+  "notes": "DTIRatio expected as RATIO (0\u20131).",
+  "metrics": {
+    "roc_auc": 0.7424740355675894
+  },
+  "cv_scores": {
+    "mean_roc_auc": 0.7379859533551435,
+    "std_roc_auc": 0.0022536503963786884
+  }
+}

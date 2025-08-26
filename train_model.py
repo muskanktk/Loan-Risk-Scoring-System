@@ -18,12 +18,12 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 ROOT = Path(__file__).parent.resolve()
-CSV = ROOT / "data" / "cleaned_data.csv"  # Changed to cleaned data
+CSV = ROOT / "data" / "data_clean.csv"  # Changed to cleaned data
 OUT_DIR = ROOT / "models"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 OUT_MODEL = OUT_DIR / "risk_model.pkl"
 OUT_META = OUT_DIR / "risk_model.meta.json"
-
+# changes made
 FEATURES = [
     "Age","Income","LoanAmount","CreditScore","MonthsEmployed",
     "NumCreditLines","InterestRate","LoanTerm","DTIRatio","HasCoSigner"
