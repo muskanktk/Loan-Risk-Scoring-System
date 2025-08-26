@@ -11,26 +11,13 @@ st.set_page_config(page_title="Loan Default Risk Scoring System", layout="center
 st.markdown(
     """
     <style>
-        .stApp {
-            background-color: #e6f2ff; /* Light blue background */
-        }
-        /* Style all buttons */
+        .stApp { background-color: #e6f2ff; }
         div.stButton > button:first-child {
-            background-color: #003366;  /* Dark blue */
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 0.5em 1.25em;
-            font-weight: 600;
+            background-color: #003366; color: white; border: none; border-radius: 8px;
+            padding: 0.5em 1.25em; font-weight: 600;
         }
-        div.stButton > button:first-child:hover {
-            background-color: #002244;  /* Darker on hover */
-            color: white;
-        }
-        /* Title color */
-        h1 {
-            color: #003366 !important;  /* Dark blue */
-        }
+        div.stButton > button:first-child:hover { background-color: #002244; color: white; }
+        h1 { color: #003366 !important; }
     </style>
     """,
     unsafe_allow_html=True
@@ -91,7 +78,7 @@ def build_feature_row(age, income, loan_amount, credit_score, months_employed,
         "MonthsEmployed": int(months_employed),
         "InterestRate": float(interest_rate),
         "LoanTerm": int(term_months),
-        "DTIRatio": float(dti_value),   # model expects PERCENT (0–100) if you trained that way
+        "DTIRatio": float(dti_value),   # percent if you trained that way
         "HasCoSigner": int(has_cosigner)
     }])
 
@@ -99,45 +86,45 @@ def build_feature_row(age, income, loan_amount, credit_score, months_employed,
 st.sidebar.header("Scoring Options")
 # UI computes DTI as ratio (0–1). If training used percent, convert ratio→percent.
 dti_is_ratio = st.sidebar.toggle(
-    "UI DTI is a ratio 0–1 (convert to % for model)", value=True
+    "UI DTI is a ratio 0–1 (convert to % for model)", value=True, key="opt_dti_is_ratio"
 )
-low_thr = st.sidebar.slider("Low → Medium threshold", 0.00, 0.50, 0.20, 0.01)
-med_thr = st.sidebar.slider("Medium → High threshold", 0.30, 0.90, 0.50, 0.01)
+low_thr = st.sidebar.slider("Low → Medium threshold", 0.00, 0.50, 0.20, 0.01, key="opt_low_thr")
+med_thr = st.sidebar.slider("Medium → High threshold", 0.30, 0.90, 0.50, 0.01, key="opt_med_thr")
 
 # ================= Main Form =================
 if "borrower_type" in st.session_state:
     bt = st.session_state["borrower_type"]
     st.write(f"Selection: **{bt}**")
 
-    with st.form("my_form"):
+    with st.form("borrower_form", clear_on_submit=False):
         st.subheader(f"{bt} Borrower Form")
         left, right = st.columns(2)
 
         if bt == "Independent":
             with left:
-                age = st.number_input("Age", min_value=18, max_value=100, value=25, step=1)
-                annual_income = st.number_input("Annual Income ($)", min_value=0, value=50_000, step=1_000)
-                monthly_debt = st.number_input("Monthly Non-Housing Debt ($)", min_value=0, value=300, step=50)
-                employment_years = st.number_input("Employment Length (years)", min_value=0, max_value=50, value=2, step=1)
+                age = st.number_input("Age", min_value=18, max_value=100, value=25, step=1, key="inp_age_ind")
+                annual_income = st.number_input("Annual Income ($)", min_value=0, value=50_000, step=1_000, key="inp_income_ind")
+                monthly_debt = st.number_input("Monthly Non-Housing Debt ($)", min_value=0, value=300, step=50, key="inp_debt_ind")
+                employment_years = st.number_input("Employment Length (years)", min_value=0, max_value=50, value=2, step=1, key="inp_empyrs_ind")
             with right:
-                credit_score = st.number_input("Credit Score", min_value=300, max_value=850, value=680, step=1)
-                property_value = st.number_input("Property Value ($)", min_value=50_000, value=350_000, step=5_000)
-                down_payment = st.number_input("Down Payment ($)", min_value=0, value=35_000, step=5_000)
-                interest_rate = st.number_input("Interest Rate (%)", min_value=1.0, max_value=25.0, value=6.5, step=0.1)
-                term_months = st.number_input("Term (months)", min_value=60, max_value=480, value=360, step=12)
+                credit_score = st.number_input("Credit Score", min_value=300, max_value=850, value=680, step=1, key="inp_cs_ind")
+                property_value = st.number_input("Property Value ($)", min_value=50_000, value=350_000, step=5_000, key="inp_prop_ind")
+                down_payment = st.number_input("Down Payment ($)", min_value=0, value=35_000, step=5_000, key="inp_down_ind")
+                interest_rate = st.number_input("Interest Rate (%)", min_value=1.0, max_value=25.0, value=6.5, step=0.1, key="inp_rate_ind")
+                term_months = st.number_input("Term (months)", min_value=60, max_value=480, value=360, step=12, key="inp_term_ind")
         else:
             with left:
-                age = st.number_input("Age", min_value=18, max_value=100, value=22, step=1)
-                relation = st.selectbox("Relationship to Guardian / Co-signer", ["Parent", "Guardian", "Co-signer"])
-                guardian_employment_years = st.number_input("Guardian Employment Length (years)", min_value=0, max_value=50, value=8, step=1)
-                guardian_annual_income = st.number_input("Guardian Annual Income ($)", min_value=0, value=110_000, step=1_000)
-                guardian_monthly_debt = st.number_input("Guardian Monthly Debt ($)", min_value=0, value=400, step=50)
+                age = st.number_input("Age", min_value=18, max_value=100, value=22, step=1, key="inp_age_dep")
+                relation = st.selectbox("Relationship to Guardian / Co-signer", ["Parent", "Guardian", "Co-signer"], key="inp_rel_dep")
+                guardian_employment_years = st.number_input("Guardian Employment Length (years)", min_value=0, max_value=50, value=8, step=1, key="inp_empyrs_dep")
+                guardian_annual_income = st.number_input("Guardian Annual Income ($)", min_value=0, value=110_000, step=1_000, key="inp_income_dep")
+                guardian_monthly_debt = st.number_input("Guardian Monthly Debt ($)", min_value=0, value=400, step=50, key="inp_debt_dep")
             with right:
-                guardian_credit_score = st.number_input("Guardian Credit Score", min_value=300, max_value=850, value=720, step=1)
-                property_value = st.number_input("Property Value ($)", min_value=50_000, value=300_000, step=5_000)
-                down_payment = st.number_input("Down Payment ($)", min_value=0, value=30_000, step=5_000)
-                interest_rate = st.number_input("Interest Rate (%)", min_value=1.0, max_value=25.0, value=6.8, step=0.1)
-                term_months = st.number_input("Term (months)", min_value=60, max_value=480, value=360, step=12)
+                guardian_credit_score = st.number_input("Guardian Credit Score", min_value=300, max_value=850, value=720, step=1, key="inp_cs_dep")
+                property_value = st.number_input("Property Value ($)", min_value=50_000, value=300_000, step=5_000, key="inp_prop_dep")
+                down_payment = st.number_input("Down Payment ($)", min_value=0, value=30_000, step=5_000, key="inp_down_dep")
+                interest_rate = st.number_input("Interest Rate (%)", min_value=1.0, max_value=25.0, value=6.8, step=0.1, key="inp_rate_dep")
+                term_months = st.number_input("Term (months)", min_value=60, max_value=480, value=360, step=12, key="inp_term_dep")
 
         submitted = st.form_submit_button("Submit", use_container_width=True)
 
@@ -161,10 +148,6 @@ if "borrower_type" in st.session_state:
 
             dti = (monthly_debt_for_calc + piti) / gross_monthly_income   # ratio 0–1
             ltv = (loan_amount / property_value) if property_value > 0 else 0.0
-
-            st.success("Form Submitted Successfully!")
-            st.write(f"**Loan amount:** ${loan_amount:,.0f} · **LTV:** {ltv:.2f} · **DTI:** {dti:.2f}")
-            st.caption(f"(Using credit score: {used_credit_score}, employment yrs: {used_employment_years})")
 
             # -------- Prediction --------
             if model is None:
@@ -203,57 +186,30 @@ if "borrower_type" in st.session_state:
                 else:
                     risk_label = "High Risk ❌"
 
-                st.divider()
-                st.write(f"**Predicted Default Probability:** {prob_default:.2%}")
-                st.progress(min(max(prob_default, 0.0), 1.0))
-                st.subheader(f"Risk Category: {risk_label}")
+                # ----- Save baseline to session_state so What-if can update reactively -----
+                st.session_state["baseline"] = {
+                    "bt": bt,
+                    "age": age,
+                    "income": income_for_calc,
+                    "monthly_debt": monthly_debt_for_calc,
+                    "credit_score": used_credit_score,
+                    "months_employed": months_employed,
+                    "interest_rate": interest_rate,
+                    "term_months": term_months,
+                    "property_value": property_value,
+                    "down_payment": down_payment,
+                    "loan_amount": loan_amount,
+                    "piti": piti,
+                    "gross_monthly_income": gross_monthly_income,
+                    "dti_ratio": dti,
+                    "dti_for_model": dti_for_model,
+                    "ltv": ltv,
+                    "has_cosigner": has_cosigner,
+                    "prob_default": prob_default,
+                    "risk_label": risk_label,
+                }
 
-                # Guidance
-                tips = []
-                if dti > 0.43:
-                    tips.append("DTI is high; consider reducing monthly debt or increasing down payment.")
-                if property_value and (loan_amount / property_value) > 0.80:
-                    tips.append("LTV > 0.80 may trigger mortgage insurance.")
-                if used_credit_score < 620:
-                    tips.append("Low credit score; conventional eligibility may be limited.")
-                if tips:
-                    st.markdown("**Suggestions:**")
-                    for t in tips:
-                        st.markdown(f"- {t}")
-
-                # -------- What-if analysis --------
-                with st.expander("What-if analysis"):
-                    bump_down = st.number_input("Extra down payment ($)", 0, 100_000, 5_000, 1_000)
-                    bump_rate = st.number_input("Rate reduction (percentage points)", 0.0, 5.0, 0.5, 0.1)
-                    bump_score = st.number_input("Credit score increase", 0, 200, 20, 5)
-
-                    loan_amount_B = max(property_value - (down_payment + bump_down), 0.0)
-                    interest_rate_B = max(interest_rate - bump_rate, 0.0)
-                    credit_score_B = min(used_credit_score + bump_score, 850)
-
-                    piti_B = monthly_payment(loan_amount_B, interest_rate_B, term_months)
-                    dti_B = (monthly_debt_for_calc + piti_B) / gross_monthly_income
-                    dti_for_model_B = (dti_B * 100.0) if dti_is_ratio else dti_B
-
-                    X_user_B = build_feature_row(
-                        age=age,
-                        income=income_for_calc,
-                        loan_amount=loan_amount_B,
-                        credit_score=credit_score_B,
-                        months_employed=months_employed,
-                        interest_rate=interest_rate_B,
-                        term_months=term_months,
-                        dti_value=dti_for_model_B,
-                        has_cosigner=has_cosigner,
-                    )
-                    prob_B = float(model.predict_proba(X_user_B)[0, 1])
-
-                    st.write(
-                        f"Baseline: **{prob_default:.2%}** → Scenario: **{prob_B:.2%}** "
-                        f"(**Δ {(prob_B - prob_default):+.2%}**)"
-                    )
-
-                # -------- Build CSV BYTES (inside form), stash to session --------
+                # Build CSV & flag ready
                 result_row = {
                     "BorrowerType": bt, "Age": age, "Income": income_for_calc,
                     "LoanAmount": loan_amount, "CreditScore": used_credit_score,
@@ -262,9 +218,70 @@ if "borrower_type" in st.session_state:
                     "HasCoSigner": has_cosigner, "LTV": ltv,
                     "ProbDefault": prob_default, "RiskLabel": risk_label
                 }
-                csv_bytes = pd.DataFrame([result_row]).to_csv(index=False).encode()
-                st.session_state["scenario_csv"] = csv_bytes
+                st.session_state["scenario_csv"] = pd.DataFrame([result_row]).to_csv(index=False).encode()
                 st.session_state["scenario_ready"] = True
+
+# ======== Render baseline + Suggestions + What-if OUTSIDE the form, reactively ========
+if "baseline" in st.session_state:
+    base = st.session_state["baseline"]
+
+    st.success("Form Submitted Successfully!")
+    st.write(f"**Loan amount:** ${base['loan_amount']:,.0f} · **LTV:** {base['ltv']:.2f} · **DTI:** {base['dti_ratio']:.2f}")
+    st.caption(f"(Using credit score: {base['credit_score']}, employment yrs: {base['months_employed'] // 12})")
+
+    st.divider()
+    st.write(f"**Predicted Default Probability:** {base['prob_default']:.2%}")
+    st.progress(min(max(base["prob_default"], 0.0), 1.0))
+    st.subheader(f"Risk Category: {base['risk_label']}")
+
+    # Guidance
+    tips = []
+    if base["dti_ratio"] > 0.43:
+        tips.append("DTI is high; consider reducing monthly debt or increasing down payment.")
+    if base["property_value"] and (base["loan_amount"] / base["property_value"]) > 0.80:
+        tips.append("LTV > 0.80 may trigger mortgage insurance.")
+    if base["credit_score"] < 620:
+        tips.append("Low credit score; conventional eligibility may be limited.")
+    if tips:
+        st.markdown("**Suggestions:**")
+        for t in tips:
+            st.markdown(f"- {t}")
+
+    # -------- What-if analysis (reactive) --------
+    with st.expander("What-if analysis", expanded=True):
+        bump_down = st.number_input("Extra down payment ($)", 0, 100_000, 5_000, 1_000, key="whatif_bump_down")
+        bump_rate = st.number_input("Rate reduction (percentage points)", 0.0, 5.0, 0.5, 0.1, key="whatif_bump_rate")
+        bump_score = st.number_input("Credit score increase", 0, 200, 20, 5, key="whatif_bump_score")
+
+        # Recompute scenario against saved baseline
+        loan_amount_B = max(base["property_value"] - (base["down_payment"] + bump_down), 0.0)
+        interest_rate_B = max(base["interest_rate"] - bump_rate, 0.0)
+        credit_score_B = min(base["credit_score"] + bump_score, 850)
+
+        piti_B = monthly_payment(loan_amount_B, interest_rate_B, base["term_months"])
+        dti_B = (base["monthly_debt"] + piti_B) / base["gross_monthly_income"]
+        dti_for_model_B = (dti_B * 100.0) if dti_is_ratio else dti_B
+
+        if model is not None:
+            X_user_B = build_feature_row(
+                age=base["age"],
+                income=base["income"],
+                loan_amount=loan_amount_B,
+                credit_score=credit_score_B,
+                months_employed=base["months_employed"],
+                interest_rate=interest_rate_B,
+                term_months=base["term_months"],
+                dti_value=dti_for_model_B,
+                has_cosigner=base["has_cosigner"],
+            )
+            prob_B = float(model.predict_proba(X_user_B)[0, 1]) 
+
+            st.write(
+                f"Baseline: **{base['prob_default']:.2%}** → Scenario: **{prob_B:.2%}** "
+                f"(**Δ {(prob_B - base['prob_default']):+.2%}**)"
+            )
+        else:
+            st.warning("Model not found. Run `python train_model.py` first.")
 
 # ========== Render the download button OUTSIDE the form ==========
 if st.session_state.get("scenario_ready") and "scenario_csv" in st.session_state:
@@ -275,5 +292,3 @@ if st.session_state.get("scenario_ready") and "scenario_csv" in st.session_state
         mime="text/csv",
         key="dl_scenario_csv"
     )
-else:
-    pass
