@@ -6,23 +6,25 @@ Provide a **what-if analysis** for loan approval likelihood based on individual 
 2. **Trained a machine learning model** to score loan risk
 3. **Tested and deployed the model** to provide interactive what-if analysis
 
-**Live demo:** [https://loan-risk-scoring-app-ztqeqbhh9cnf8ktcjdusxy.streamlit.app/](https://loan-risk-scoring-app-ztqeqbhh9cnf8ktcjdusxy.streamlit.app/)
+**Live demo:** 
 
-## Features
 
-* **Two borrower forms:** Independent (uses your info) or Dependent (uses guardian/co-signer info)
-* **Default probability prediction:** Shows chance of repayment vs. default and assigns a risk label (Low, Medium, High)
-* **DTI and LTV analysis:** Explains how debt-to-income ratio and loan-to-value ratio affect your risk
-* **What-if analysis:** Simulate changes (extra down payment, lower interest rate, improved credit score) and instantly see risk impact
-* **CSV Export:** Download your loan scenario results
+## 🚀 Features
 
-## Tech Stack
+✔ Independent & Dependent borrower forms
+✔ Instant loan default probability prediction
+✔ Clear risk categories (Low / Medium / High)
+✔ DTI & LTV risk factor analysis
+✔ Interactive what-if analysis (down payment, interest rate, credit score)
+✔ One-click CSV export of loan scenarios
+
+## 🛠️ Tech Stack
 
 * **Language:** Python
 * **Frameworks/Libraries:** Streamlit, NumPy, pandas, scikit-learn, joblib
 * **Tools:** Git, VS Code
 
-## Installation
+## 📦 Installation
 
 ```bash
 # 1) Clone the repository
@@ -52,7 +54,7 @@ joblib
 
 ---
 
-## Run Locally
+## ▶ Run Locally
 
 ```bash
 streamlit run app.py
@@ -60,15 +62,17 @@ streamlit run app.py
 
 Then open the local URL shown in your terminal.
 
-## How to Use
+## 💡 How to Use
 
-1. Choose **Independent** or **Dependent**
-2. Fill out the loan form with your details (income, debts, property value, down payment, credit score, etc.)
-3. Submit → see your **loan risk score** and **probability of default**
-4. Expand **What-if analysis** to test scenarios (e.g., add down payment, lower interest rate)
-5. Download results as CSV
+1. Select **Independent** or **Dependent**
+2. Enter borrower details (income, debts, property value, down payment, credit score, etc.)
+3. Submit → see **default probability** and **risk label**
+4. Open **What-if analysis** to simulate changes
+5. Export results as CSV
 
-## Project Structure
+---
+
+## 📂 Project Structure
 
 ```
 Loan-Risk-Scoring-System/
@@ -85,30 +89,27 @@ Loan-Risk-Scoring-System/
 
 ---
 
-## Hosted App
+## 🌐 Hosted App
 
 * **Browser link:** [Loan Risk Scoring System](https://loan-risk-scoring-app-ztqeqbhh9cnf8ktcjdusxy.streamlit.app/)
 
----
+## 🛣️ Roadmap
 
-## Roadmap
+* [ ] Add monthly payment breakdown (principal vs. interest)
+* [ ] Provide personalized credit/DTI improvement tips
+* [ ] Compare multiple borrower profiles side-by-side
+* [ ] Train on expanded datasets for better accuracy
+      
+## 📊 Sample Output
 
-* [ ] Add visualization of monthly payment breakdown (principal vs. interest)
-* [ ] More granular credit / DTI suggestions
-* [ ] Support for multiple borrower profiles comparison
-* [ ] Expand dataset for improved accuracy
-
-## Sample Output
-
-Example exported scenario:
-[loan_scenario (2).csv](https://github.com/user-attachments/files/21991303/loan_scenario.2.csv)
+Example exported scenario: [loan_scenario.2 (1).csv](https://github.com/user-attachments/files/21991423/loan_scenario.2.1.csv)
 
 ## Troubleshooting
 
 * **`ModuleNotFoundError`** → Run `pip install -r requirements.txt` inside your virtualenv
 * **Streamlit won’t start** → Ensure virtual environment is active (`which streamlit` or `venv\Scripts\activate`)
 * **Model not found** → Run `python train_model.py` to create `models/risk_model.pkl`
-
+  
 ## License
 
 MIT License – see [LICENSE](LICENSE) for details.
