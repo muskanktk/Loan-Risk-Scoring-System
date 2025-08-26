@@ -5,14 +5,14 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, roc_auc_score
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 ROOT = Path(__file__).parent.resolve()
-CSV = ROOT / "data" / "data.csv"
+CSV = ROOT / "data" / "cleaned_data.csv"  # Changed to cleaned data
 OUT_DIR = ROOT / "models"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 OUT_MODEL = OUT_DIR / "risk_model.pkl"
@@ -38,6 +38,25 @@ def to_num(s: pd.Series) -> pd.Series:
          .str.strip()
     )
     return pd.to_numeric(x, errors="coerce")
+
+def plot_feature_importance(model, feature_names, out_dir):
+    """Plot and save feature importance graph"""
+    try:
+        import matplotlib.pyplot as plt
+        
+        importance = model.named_steps['model'].feature_importances_
+        indices = np.argsort(importance)[::-1]
+        
+        plt.figure(figsize=(10, 6))
+        plt.title("Feature Importance")
+        plt.bar(range(len(importance)), importance[indices])
+        plt.xticks(range(len(importance)), [feature_names[i] for i in indices], rotation=45)
+        plt.tight_layout()
+        plt.savefig(out_dir / "feature_importance.png")
+        plt.close()
+        print(f"[INFO] Saved feature importance plot → {out_dir / 'feature_importance.png'}")
+    except Exception as e:
+        print(f"[INFO] Could not create feature importance plot: {e}")
 
 def load_and_clean(csv_path: Path) -> tuple[pd.DataFrame, pd.Series]:
     if not csv_path.exists():
@@ -90,12 +109,21 @@ def main():
         X, y, test_size=0.20, random_state=42, stratify=y
     )
 
+    # Use RandomForest instead of LogisticRegression
     clf = Pipeline(steps=[
         ("scaler", StandardScaler()),
-        ("model", LogisticRegression(
-            max_iter=1000, class_weight="balanced", solver="lbfgs", random_state=42
+        ("model", RandomForestClassifier(
+            n_estimators=100,
+            max_depth=10,
+            min_samples_split=5,
+            class_weight="balanced",
+            random_state=42
         )),
     ])
+
+    # Add cross-validation
+    cv_scores = cross_val_score(clf, X_train, y_train, cv=5, scoring='roc_auc')
+    print(f"Cross-validation ROC AUC: {np.mean(cv_scores):.3f} (±{np.std(cv_scores):.3f})")
 
     clf.fit(X_train, y_train)
     y_pred = clf.predict(X_test)
@@ -109,6 +137,9 @@ def main():
     except Exception:
         auc = None
 
+    # Add feature importance visualization
+    plot_feature_importance(clf, FEATURES, OUT_DIR)
+
     joblib.dump({"model": clf, "feature_names": FEATURES}, OUT_MODEL)
     print(f"[INFO] Saved model → {OUT_MODEL}")
 
@@ -117,6 +148,10 @@ def main():
         "target_name": TARGET,
         "notes": "DTIRatio expected as RATIO (0–1).",
         "metrics": {"roc_auc": float(auc) if auc is not None else None},
+        "cv_scores": {
+            "mean_roc_auc": float(np.mean(cv_scores)),
+            "std_roc_auc": float(np.std(cv_scores))
+        }
     }
     OUT_META.write_text(json.dumps(meta, indent=2))
     print(f"[INFO] Saved meta → {OUT_META}")
