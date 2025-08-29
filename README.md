@@ -2,7 +2,8 @@
 
 A **what-if analysis** tool for predicting loan default probability based on individual borrower status (**Independent** or **Dependent**). This system uses a machine learning model trained on loan default datasets to provide instant risk assessments.
 
-> **Live Demo:**
+> **Live Demo:** 
+![ezgif com-video-to-gif-converter (2)](https://github.com/user-attachments/assets/5790e88b-f4bf-483a-9eb0-428f54d12ae6)
 
 
 > **Browser Link:** [Loan Risk Scoring System](https://loan-risk-scoring-app-ztqeqbhh9cnf8ktcjdusxy.streamlit.app/)
