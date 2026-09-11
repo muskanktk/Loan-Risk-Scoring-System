@@ -139,7 +139,11 @@ def main():
 
     plot_feature_importance(rf, FEATURES, OUT_DIR)
 
-    joblib.dump({"model": rf, "feature_names": FEATURES}, OUT_MODEL)
+    joblib.dump(
+        {"model": rf, "feature_names": FEATURES},
+        OUT_MODEL,
+        compress=3,
+    )
     print(f"[INFO] Saved model → {OUT_MODEL}")
 
     meta = {
