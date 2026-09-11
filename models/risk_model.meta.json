@@ -14,10 +14,10 @@
   "target_name": "Default",
   "notes": "DTIRatio expected as RATIO (0\u20131); auto-converted if percent detected.",
   "metrics": {
-    "roc_auc": 0.7302820898577436
+    "roc_auc": 0.732716976825539
   },
   "cv_scores": {
-    "mean_roc_auc": 0.7264397660197147,
-    "std_roc_auc": 0.002452658029040513
+    "mean_roc_auc": 0.7286853798667758,
+    "std_roc_auc": 0.0027455245863216315
   }
 }

@@ -113,9 +113,10 @@ def main():
     )
 
     rf = RandomForestClassifier(
-        n_estimators=300,
-        max_depth=None,
+        n_estimators=100,
+        max_depth=18,
         min_samples_split=5,
+        min_samples_leaf=2,
         class_weight="balanced",
         n_jobs=-1,
         random_state=42,
