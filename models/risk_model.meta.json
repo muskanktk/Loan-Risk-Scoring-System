@@ -12,12 +12,12 @@
     "HasCoSigner"
   ],
   "target_name": "Default",
-  "notes": "DTIRatio expected as RATIO (0\u20131).",
+  "notes": "DTIRatio expected as RATIO (0\u20131); auto-converted if percent detected.",
   "metrics": {
-    "roc_auc": 0.7424740355675894
+    "roc_auc": 0.7302820898577436
   },
   "cv_scores": {
-    "mean_roc_auc": 0.7379859533551435,
-    "std_roc_auc": 0.0022536503963786884
+    "mean_roc_auc": 0.7264397660197147,
+    "std_roc_auc": 0.002452658029040513
   }
 }

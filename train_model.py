@@ -1,4 +1,3 @@
-# train_model.py
 import json
 import sys
 from pathlib import Path
@@ -11,7 +10,7 @@ from sklearn.metrics import classification_report, roc_auc_score
 from sklearn.model_selection import train_test_split, cross_val_score
 
 ROOT = Path(__file__).parent.resolve()
-CSV = ROOT / "data" / "data_clean.csv"      # use the CLEANED dataset
+CSV = ROOT / "data" / "data_clean.csv"
 OUT_DIR = ROOT / "models"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 OUT_MODEL = OUT_DIR / "risk_model.pkl"
@@ -21,9 +20,8 @@ FEATURES = [
     "Age","Income","LoanAmount","CreditScore","MonthsEmployed",
     "NumCreditLines","InterestRate","LoanTerm","DTIRatio","HasCoSigner"
 ]
-TARGET = "Default"  # must match your CSV
+TARGET = "Default"
 
-# --------------------- helpers ---------------------
 def to_bool01(s: pd.Series) -> pd.Series:
     x = s.astype(str).str.strip().str.lower()
     m = x.map({"yes":1,"y":1,"true":1,"t":1,"1":1,"no":0,"n":0,"false":0,"f":0,"0":0})
@@ -75,31 +73,27 @@ def load_and_clean(csv_path: Path):
     clean["CreditScore"]    = to_num(df["CreditScore"])
     clean["MonthsEmployed"] = to_num(df["MonthsEmployed"])
     clean["NumCreditLines"] = to_num(df["NumCreditLines"]).fillna(0).astype(int)
-    clean["InterestRate"]   = to_num(df["InterestRate"])   # 6.5% -> 6.5
+    clean["InterestRate"]   = to_num(df["InterestRate"])
     clean["LoanTerm"]       = to_num(df["LoanTerm"])
-    clean["DTIRatio"]       = to_num(df["DTIRatio"])       # expect ratio (0–1)
+    clean["DTIRatio"]       = to_num(df["DTIRatio"])
     clean["HasCoSigner"]    = to_bool01(df["HasCoSigner"]).fillna(0).astype(int)
 
-    # target to 0/1
     y = df[TARGET]
     if y.dtype.kind not in "biu":
         y = to_bool01(y)
     y = pd.to_numeric(y, errors="coerce")
 
-    # ---- DTI unit auto-fix: if median > 1, it was percent; convert to ratio ----
     dti_med = clean["DTIRatio"].median(skipna=True)
     if pd.notna(dti_med) and dti_med > 1:
         print("[WARN] DTIRatio looks like PERCENT; converting to ratio by /100.")
         clean["DTIRatio"] = clean["DTIRatio"] / 100.0
     clean["DTIRatio"] = clean["DTIRatio"].clip(0.0, 1.2)
 
-    # drop rows with missing y, fill remaining numeric NaNs with medians
     keep = ~y.isna()
     clean, y = clean.loc[keep].copy(), y.loc[keep].copy()
     clean = clean.fillna(clean.median(numeric_only=True))
     y = y.astype(int)
 
-    # quick report
     print("[INFO] dtypes after cleaning:")
     print(clean.dtypes.to_string())
     vc = y.value_counts(dropna=False)
@@ -111,7 +105,6 @@ def load_and_clean(csv_path: Path):
 
     return clean, y
 
-# --------------------- main ---------------------
 def main():
     X, y = load_and_clean(CSV)
 
@@ -119,7 +112,6 @@ def main():
         X, y, test_size=0.20, random_state=42, stratify=y
     )
 
-    # RandomForest (no scaler needed)
     rf = RandomForestClassifier(
         n_estimators=300,
         max_depth=None,
@@ -129,8 +121,6 @@ def main():
         random_state=42,
     )
 
-    # Cross-validated AUC on train split
-    # (Using the estimator directly; CV uses default predict_proba)
     cv_scores = cross_val_score(rf, X_train, y_train, cv=5, scoring="roc_auc", n_jobs=-1)
     print(f"[CV] ROC AUC: {np.mean(cv_scores):.3f} (±{np.std(cv_scores):.3f})")
 
@@ -146,10 +136,8 @@ def main():
     except Exception:
         auc = None
 
-    # Optional: save feature importance plot
     plot_feature_importance(rf, FEATURES, OUT_DIR)
 
-    # Save model + feature names (your app expects this shape)
     joblib.dump({"model": rf, "feature_names": FEATURES}, OUT_MODEL)
     print(f"[INFO] Saved model → {OUT_MODEL}")
 
