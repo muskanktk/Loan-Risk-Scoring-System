@@ -32,7 +32,14 @@ def render_landing_page():
     st.title("Select Your Current Financial Situation")
     st.markdown(
         '''
-        <p class="page-subtitle">
+        <p style="
+            color: #003366;
+            font-size: 18px;
+            font-weight: 300;
+            margin-top: -10px;
+            margin-bottom: 20px;
+            text-align: center;
+        ">
             Choose the option that best reflects your current status
         </p>
         ''',
